@@ -2,17 +2,27 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useOutletContext, Link } from "react-router-dom";
 import { db } from "../firebase/firebaseConfig";
-import { collection, query, where, doc, getDocs, orderBy, updateDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, doc, getDocs, orderBy, updateDoc, serverTimestamp, addDoc } from "firebase/firestore";
 import { calculateScore } from "../utils/calculateScore";
-import { History, Edit3, X, Save, ArrowLeft } from "lucide-react";
+import { History, Edit3, X, Save, ArrowLeft, PlusCircle, Target, Activity } from "lucide-react";
+import toast from "react-hot-toast";
 
 function MyProgress() {
-    const { user } = useAuth();
+    const { user, userProfile } = useAuth();
     const { group } = useOutletContext();
     const [progressList, setProgressList] = useState([]);
     const [editingItem, setEditingItem] = useState(null);
     const [editData, setEditData] = useState({});
     const [loading, setLoading] = useState(true);
+
+    const [showForm, setShowForm] = useState(false);
+    const [formData, setFormData] = useState({
+        moduleNo: "",
+        examStatus: "",
+        linkedinActivity: "",
+        linkedinCount: "",
+        postLink: "",
+    });
 
     const fetchProgress = useCallback(async () => {
         if (!group) {
@@ -45,6 +55,69 @@ function MyProgress() {
             setLoading(false);
         }
     }, [group, user]);
+
+    const handleFormChange = (e) => {
+        setFormData({
+            ...formData,
+            [e.target.name]: e.target.value
+        });
+    };
+
+    const handleFormSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!group) {
+            toast.error("No group found");
+            return;
+        }
+
+        try {
+            const existingDocQuery = query(
+                collection(db, "groups", group.id, "progress"),
+                where("userId", "==", user.uid),
+                where("moduleNo", "==", Number(formData.moduleNo))
+            );
+
+            const existingDocs = await getDocs(existingDocQuery);
+            if (!existingDocs.empty) {
+                toast.error(`You have already submitted progress for Module ${formData.moduleNo}. Please edit it in 'My Progress History' instead.`);
+                return;
+            }
+
+            const score = calculateScore(
+                formData.examStatus,
+                formData.linkedinActivity,
+            );
+
+            await addDoc(collection(db, "groups", group.id, "progress"), {
+                userId: user.uid,
+                userName: userProfile?.nickName || userProfile?.fullName || user.displayName || user.email,
+                moduleNo: Number(formData.moduleNo),
+                examStatus: formData.examStatus,
+                linkedinActivity: formData.linkedinActivity,
+                linkedinCount: formData.linkedinCount || 0,
+                postLink: formData.postLink,
+                score: score,
+                createdAt: serverTimestamp(),
+            });
+
+            setFormData({
+                moduleNo: "",
+                examStatus: "",
+                linkedinActivity: "",
+                linkedinCount: "",
+                postLink: "",
+            });
+
+            setShowForm(false);
+            toast.success("Progress saved successfully!");
+            await fetchProgress();
+
+        } catch (error) {
+            console.error("Save error:", error);
+            toast.error("Failed to save progress");
+        }
+    };
 
     useEffect(() => {
         fetchProgress();
@@ -114,16 +187,27 @@ function MyProgress() {
                     <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
                     <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/3 pointer-events-none" />
 
-                    <div className="flex items-center gap-6 relative z-10 w-full">
-                        <div className="w-16 h-16 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl rounded-2xl flex items-center justify-center shadow-lg border border-white/50 dark:border-slate-700/50 shrink-0">
-                            <History className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full relative z-10 gap-4">
+                        <div className="flex items-center gap-6">
+                            <div className="w-16 h-16 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl rounded-2xl flex items-center justify-center shadow-lg border border-white/50 dark:border-slate-700/50 shrink-0">
+                                <History className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">My Progress History</h1>
+                                <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">
+                                    Review and edit your past weekly submissions.
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">My Progress History</h1>
-                            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">
-                                Review and edit your past weekly submissions.
-                            </p>
-                        </div>
+                        {group && (
+                            <button
+                                onClick={() => setShowForm(true)}
+                                className="px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/20 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 border border-indigo-500 w-full sm:w-auto mt-4 sm:mt-0"
+                            >
+                                <PlusCircle className="w-5 h-5" />
+                                Log Weekly Progress
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -206,6 +290,110 @@ function MyProgress() {
                     </div>
                 </div>
             </div>
+
+            {/* Modal for Logging Progress */}
+            {showForm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowForm(false)}></div>
+
+                    <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 p-8 animate-fadeIn transform transition-all scale-100">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-2xl font-extrabold text-slate-800 dark:text-white flex items-center gap-3">
+                                <div className="p-2 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400">
+                                    <Activity className="w-6 h-6" />
+                                </div>
+                                Log Progress
+                            </h3>
+                            <button onClick={() => setShowForm(false)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 bg-slate-50 dark:bg-slate-800 rounded-full transition-colors">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleFormSubmit} className="space-y-5 relative">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Module Number</label>
+                                <input
+                                    type="number"
+                                    name="moduleNo"
+                                    placeholder="e.g. 25"
+                                    value={formData.moduleNo}
+                                    onChange={handleFormChange}
+                                    className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition font-medium"
+                                    required
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Exam Status</label>
+                                    <select
+                                        name="examStatus"
+                                        value={formData.examStatus}
+                                        onChange={handleFormChange}
+                                        className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500/50 outline-none transition appearance-none font-medium"
+                                        required
+                                    >
+                                        <option value="">Select status</option>
+                                        <option value="Passed">Passed</option>
+                                        <option value="Repeat">Repeat</option>
+                                        <option value="Reschedule">Rescheduled</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">LinkedIn Activity</label>
+                                    <select
+                                        name="linkedinActivity"
+                                        value={formData.linkedinActivity}
+                                        onChange={handleFormChange}
+                                        className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500/50 outline-none transition appearance-none font-medium"
+                                        required
+                                    >
+                                        <option value="">Select activity</option>
+                                        <option value="Posted">Posted</option>
+                                        <option value="Commented">Commented</option>
+                                        <option value="Shared">Shared</option>
+                                        <option value="None">None</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Connection Count</label>
+                                    <input
+                                        type="number"
+                                        name="linkedinCount"
+                                        placeholder="Total connections"
+                                        value={formData.linkedinCount}
+                                        onChange={handleFormChange}
+                                        className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500/50 outline-none transition font-medium"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Post Link (Optional)</label>
+                                    <input
+                                        type="text"
+                                        name="postLink"
+                                        placeholder="URL"
+                                        value={formData.postLink}
+                                        onChange={handleFormChange}
+                                        className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500/50 outline-none transition font-medium"
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 mt-4 rounded-xl font-bold transition-all hover:scale-[1.01] shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2"
+                            >
+                                <Target className="w-5 h-5" />
+                                Submit Progress
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Modal for Editing */}
             {editingItem && (

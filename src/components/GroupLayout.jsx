@@ -1,11 +1,10 @@
 import { Outlet } from "react-router-dom";
 import { db } from "../firebase/firebaseConfig";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 
 function GroupLayout() {
-
   const { user } = useAuth();
 
   const [groups, setGroups] = useState([]);
@@ -19,30 +18,22 @@ function GroupLayout() {
   useEffect(() => {
     if (!user) return;
 
-    const fetchGroups = async () => {
+    const q1 = query(
+      collection(db, "groups"),
+      where("members", "array-contains", user.uid)
+    );
 
-      const q1 = query(
-        collection(db, "groups"),
-        where("members", "array-contains", user.uid)
-      );
+    const q2 = query(
+      collection(db, "groups"),
+      where("ownerId", "==", user.uid)
+    );
 
-      const q2 = query(
-        collection(db, "groups"),
-        where("ownerId", "==", user.uid)
-      );
+    let currentMap1 = {};
+    let currentMap2 = {};
 
-      const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-
-      const groupMap = {};
-      snap1.docs.forEach(doc => {
-        groupMap[doc.id] = { id: doc.id, ...doc.data() };
-      });
-      snap2.docs.forEach(doc => {
-        groupMap[doc.id] = { id: doc.id, ...doc.data() };
-      });
-
+    const updateGroups = () => {
+      const groupMap = { ...currentMap1, ...currentMap2 };
       const groupList = Object.values(groupMap);
-
       setGroups(groupList);
 
       const savedGroupId = localStorage.getItem("activeGroupId");
@@ -58,10 +49,33 @@ function GroupLayout() {
       } else if (groupList.length > 0) {
         setActiveGroup(groupList[0]);
         localStorage.setItem("activeGroupId", groupList[0].id);
+      } else {
+        setActiveGroup(null);
       }
     };
 
-    fetchGroups();
+    const unsub1 = onSnapshot(q1, (snap) => {
+      const newMap1 = {};
+      snap.docs.forEach((doc) => {
+        newMap1[doc.id] = { id: doc.id, ...doc.data() };
+      });
+      currentMap1 = newMap1;
+      updateGroups();
+    });
+
+    const unsub2 = onSnapshot(q2, (snap) => {
+      const newMap2 = {};
+      snap.docs.forEach((doc) => {
+        newMap2[doc.id] = { id: doc.id, ...doc.data() };
+      });
+      currentMap2 = newMap2;
+      updateGroups();
+    });
+
+    return () => {
+      unsub1();
+      unsub2();
+    };
   }, [user]);
 
   return (
@@ -75,4 +89,4 @@ function GroupLayout() {
   );
 }
 
-export default GroupLayout; 
+export default GroupLayout;
