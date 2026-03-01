@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 function AdminDashboard() {
     const [stats, setStats] = useState({ totalUsers: 0, totalGroups: 0 });
     const [groups, setGroups] = useState([]);
+    const [usersList, setUsersList] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -16,6 +17,10 @@ function AdminDashboard() {
                 // Fetch Users
                 const usersSnap = await getDocs(collection(db, "users"));
                 const totalUsers = usersSnap.size;
+                const usersData = usersSnap.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
 
                 // Fetch Groups
                 const groupsQuery = query(collection(db, "groups"), orderBy("createdAt", "desc"));
@@ -41,6 +46,7 @@ function AdminDashboard() {
 
                 setStats({ totalUsers, totalGroups });
                 setGroups(groupData);
+                setUsersList(usersData);
 
             } catch (error) {
                 console.error("Error fetching admin data:", error);
@@ -147,6 +153,68 @@ function AdminDashboard() {
                     </div>
                 </div>
 
+            </div>
+
+            {/* Users List */}
+            <div className="max-w-[1600px] w-full mx-auto mt-8">
+                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl rounded-[2rem] shadow-2xl border border-slate-200/50 dark:border-white/5 overflow-hidden transition-colors duration-300">
+                    <div className="px-6 py-5 border-b border-slate-100/50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between">
+                        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <Users className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+                            Registered Users
+                        </h2>
+                        <span className="text-sm font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 px-3 py-1 rounded-full">{usersList.length} Total</span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[800px]">
+                            <thead>
+                                <tr className="border-b-2 border-slate-100 dark:border-slate-800 bg-slate-50/20 dark:bg-slate-800/10">
+                                    <th className="pb-4 pt-4 px-6 font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs tracking-wider">User</th>
+                                    <th className="pb-4 pt-4 px-6 font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs tracking-wider">Email</th>
+                                    <th className="pb-4 pt-4 px-6 font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs tracking-wider">Nickname</th>
+                                    <th className="pb-4 pt-4 px-6 font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs tracking-wider">Privacy Mode</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                                {usersList.map((user) => (
+                                    <tr key={user.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
+                                        <td className="py-4 px-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-indigo-600 dark:to-purple-700 text-white font-bold shadow-sm shrink-0">
+                                                    {(user.fullName || user.displayName || user.email || "U").charAt(0).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                                        {user.fullName || user.displayName || user.email || "Unknown User"}
+                                                        {user.emoji && <span className="text-lg leading-none">{user.emoji}</span>}
+                                                    </p>
+                                                    <p className="text-xs text-slate-400 font-medium font-mono">ID: {user.id}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-6 text-slate-600 dark:text-slate-400 text-sm font-medium">
+                                            {user.email || "—"}
+                                        </td>
+                                        <td className="py-4 px-6 text-slate-600 dark:text-slate-400 text-sm font-medium">
+                                            {user.nickName || "—"}
+                                        </td>
+                                        <td className="py-4 px-6">
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${user.privacyMode ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                                                {user.privacyMode ? "Private" : "Public"}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {usersList.length === 0 && (
+                            <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+                                No users registered yet.
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );
