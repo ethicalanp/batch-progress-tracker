@@ -249,7 +249,7 @@ import { collection, getDocs, orderBy, query, addDoc, serverTimestamp, where } f
 import { useEffect, useState } from "react";
 import { calculateScore } from "../utils/calculateScore";
 import Leaderboard from "../components/Leaderboard";
-import { PlusCircle, Target, Users as UsersIcon, Activity, ChevronRight, BarChart, Copy, CheckCircle2, ChevronDown, Calendar, Clock, AlertTriangle } from "lucide-react";
+import { PlusCircle, Target, Users as UsersIcon, Activity, ChevronRight, BarChart, Copy, CheckCircle2, ChevronDown, Calendar, Clock, AlertTriangle, ExternalLink } from "lucide-react";
 import toast from "react-hot-toast";
 
 function Dashboard() {
@@ -851,9 +851,21 @@ function Dashboard() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-5 text-sm font-medium text-slate-600 dark:text-slate-400">
-                                                    {item.linkedinActivity}
-                                                </td>
-                                                <td className="px-6 py-5 text-right">
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{item.linkedinActivity}</span>
+                                                        {item.postLink && (
+                                                            <a
+                                                                href={item.postLink.startsWith('http') ? item.postLink : `https://${item.postLink}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+                                                                title="View Post"
+                                                            >
+                                                                <ExternalLink className="w-4 h-4" />
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </td>                                                <td className="px-6 py-5 text-right">
                                                     <span className="font-bold text-xl text-indigo-600 dark:text-indigo-400">{item.score || 0}</span>
                                                 </td>
                                             </tr>

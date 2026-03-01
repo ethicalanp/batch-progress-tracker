@@ -2,10 +2,11 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useOutletContext, Link } from "react-router-dom";
 import { db } from "../firebase/firebaseConfig";
-import { collection, query, where, doc, getDocs, orderBy, updateDoc, serverTimestamp, addDoc } from "firebase/firestore";
+import { collection, query, where, doc, getDocs, orderBy, updateDoc, serverTimestamp, addDoc, deleteDoc } from "firebase/firestore";
 import { calculateScore } from "../utils/calculateScore";
-import { History, Edit3, X, Save, ArrowLeft, PlusCircle, Target, Activity } from "lucide-react";
+import { History, Edit3, X, Save, ArrowLeft, PlusCircle, Target, Activity, Trash2, ExternalLink } from "lucide-react";
 import toast from "react-hot-toast";
+import ConfirmModal from "../components/ConfirmModal";
 
 function MyProgress() {
     const { user, userProfile } = useAuth();
@@ -14,6 +15,9 @@ function MyProgress() {
     const [editingItem, setEditingItem] = useState(null);
     const [editData, setEditData] = useState({});
     const [loading, setLoading] = useState(true);
+
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
 
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({
@@ -143,6 +147,21 @@ function MyProgress() {
 
     const handleUpdate = async () => {
         try {
+            // Check for duplicate module entry
+            const existingDocQuery = query(
+                collection(db, "groups", group.id, "progress"),
+                where("userId", "==", user.uid),
+                where("moduleNo", "==", Number(editData.moduleNo))
+            );
+
+            const existingDocs = await getDocs(existingDocQuery);
+            const isDuplicate = existingDocs.docs.some(doc => doc.id !== editingItem);
+
+            if (isDuplicate) {
+                toast.error(`You have already submitted progress for Module ${editData.moduleNo}.`);
+                return;
+            }
+
             const docRef = doc(db, "groups", group.id, "progress", editingItem);
 
             const newScore = calculateScore(
@@ -161,11 +180,35 @@ function MyProgress() {
             });
 
             setEditingItem(null);
+            toast.success("Progress updated successfully!");
             await fetchProgress();
 
         } catch (error) {
             console.error(error);
-            alert("Update failed");
+            toast.error("Update failed");
+        }
+    };
+
+    const handleDeleteClick = (item) => {
+        setItemToDelete(item);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete || !group) return;
+
+        try {
+            const docRef = doc(db, "groups", group.id, "progress", itemToDelete.id);
+            await deleteDoc(docRef);
+
+            toast.success("Progress entry deleted successfully");
+            setIsDeleteModalOpen(false);
+            setItemToDelete(null);
+
+            await fetchProgress();
+        } catch (error) {
+            console.error("Delete error:", error);
+            toast.error("Failed to delete progress");
         }
     };
 
@@ -265,7 +308,22 @@ function MyProgress() {
                                                         {item.examStatus}
                                                     </span>
                                                 </td>
-                                                <td className="py-4 px-4 text-slate-600 dark:text-slate-400 text-sm">{item.linkedinActivity}</td>
+                                                <td className="py-4 px-4 text-slate-600 dark:text-slate-400 text-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{item.linkedinActivity}</span>
+                                                        {item.postLink && (
+                                                            <a
+                                                                href={item.postLink.startsWith('http') ? item.postLink : `https://${item.postLink}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+                                                                title="View Post"
+                                                            >
+                                                                <ExternalLink className="w-4 h-4" />
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </td>
                                                 <td className="py-4 px-4 text-slate-600 dark:text-slate-400 text-sm">{item.linkedinCount}</td>
                                                 <td className="py-4 px-4">
                                                     <span className="font-bold text-indigo-600 dark:text-indigo-400 text-lg">{item.score ?? 0}</span>
@@ -274,12 +332,22 @@ function MyProgress() {
                                                     {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : "—"}
                                                 </td>
                                                 <td className="py-4 px-4 text-right">
-                                                    <button
-                                                        onClick={() => handleEditClick(item)}
-                                                        className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                                    >
-                                                        <Edit3 className="w-5 h-5" />
-                                                    </button>
+                                                    <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => handleEditClick(item)}
+                                                            className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                                                            title="Edit Entry"
+                                                        >
+                                                            <Edit3 className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteClick(item)}
+                                                            className="p-2 text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
+                                                            title="Delete Entry"
+                                                        >
+                                                            <Trash2 className="w-5 h-5" />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -494,6 +562,16 @@ function MyProgress() {
                     </div>
                 </div>
             )}
+            {/* Delete Confirmation Modal */}
+            <ConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Delete Progress Log"
+                description={`Are you sure you want to delete your progress log for Module ${itemToDelete?.moduleNo}? This action permanently removes this entry and updates your batch timeline.`}
+                confirmText="delete"
+                actionButtonText="Delete Log"
+            />
         </div>
     );
 }
