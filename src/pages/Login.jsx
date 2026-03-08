@@ -13,9 +13,6 @@ function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [rememberMe, setRememberMe] = useState(
-    localStorage.getItem("rememberMe") === "true"
-  );
 
   const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme();
@@ -56,12 +53,7 @@ function Login() {
     handleRedirectResult();
   }, [navigate]);
 
-  useEffect(() => {
-    const savedEmail = localStorage.getItem("rememberedEmail");
-    if (savedEmail && rememberMe) {
-      setEmail(savedEmail);
-    }
-  }, [rememberMe]);
+
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -69,9 +61,8 @@ function Login() {
     setError("");
     const trimmedEmail = email.trim();
     try {
-      // Set persistence based on remember me BEFORE signing in
-      const persistenceType = rememberMe ? browserLocalPersistence : browserSessionPersistence;
-      await setPersistence(auth, persistenceType);
+      // Force local persistence
+      await setPersistence(auth, browserLocalPersistence);
 
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
 
@@ -79,14 +70,6 @@ function Login() {
         await auth.signOut();
         toast.error("Please verify your email before logging in. Check your inbox.");
         return;
-      }
-
-      if (rememberMe) {
-        localStorage.setItem("rememberedEmail", trimmedEmail);
-        localStorage.setItem("rememberMe", "true");
-      } else {
-        localStorage.removeItem("rememberedEmail");
-        localStorage.setItem("rememberMe", "false");
       }
 
       toast.success("Welcome back!");
@@ -103,10 +86,8 @@ function Login() {
       setLoading(true);
       setError("");
 
-      const persistenceType = rememberMe ? browserLocalPersistence : browserSessionPersistence;
-      // Do not await setPersistence here to keep the synchronous user interaction context alive 
-      // for iOS Safari, otherwise the popup/redirect will be blocked as "without user interaction"
-      setPersistence(auth, persistenceType).catch(console.error);
+      // Force local persistence
+      setPersistence(auth, browserLocalPersistence).catch(console.error);
 
       const provider = new GoogleAuthProvider();
       // Force account selection to ensure the popup gets proper interaction and doesn't silently fail
@@ -240,19 +221,6 @@ function Login() {
               </div>
             </div>
 
-            {/* Remember Me Checkbox */}
-            <div className="flex items-center">
-              <input
-                id="rememberMe"
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 text-indigo-600 bg-slate-100 border-slate-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-slate-900 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 cursor-pointer"
-              />
-              <label htmlFor="rememberMe" className="ml-2 text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer select-none">
-                Remember me
-              </label>
-            </div>
 
             {/* Submit Button */}
             <button

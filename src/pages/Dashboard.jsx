@@ -245,13 +245,14 @@ import { LogOut } from "lucide-react";
 import { Link, useOutletContext } from "react-router-dom";
 import { db } from "../firebase/firebaseConfig";
 import { useAuth } from "../context/AuthContext";
-import { collection, getDocs, orderBy, query, addDoc, serverTimestamp, where } from "firebase/firestore";
+import { collection, getDocs, orderBy, query, addDoc, serverTimestamp, where, limit } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { calculateScore } from "../utils/calculateScore";
 import { Activity, Target, LayoutDashboard, CheckCircle2, Medal, Clock, TrendingUp, Users, FileText, BarChart, ExternalLink, ChevronRight, Award, Trophy, Play, Calendar, Zap, AlertCircle, X, Check, UsersIcon, ShieldAlert, Sparkles, Target as TargetIcon, Copy, PlusCircle } from "lucide-react";
 import Leaderboard from "../components/Leaderboard";
 import KicksBoard from "../components/KicksBoard";
 import toast from "react-hot-toast";
+import ReminderModal from "../components/ReminderModal";
 
 function Dashboard() {
     const { user, userProfile } = useAuth();
@@ -259,6 +260,7 @@ function Dashboard() {
     const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
 
     const [showForm, setShowForm] = useState(false);
+    const [showReminder, setShowReminder] = useState(false);
     const [formData, setFormData] = useState({
         moduleNo: "",
         examStatus: "",
@@ -286,6 +288,45 @@ function Dashboard() {
 
     // Timeline State Options
     const [timelineData, setTimelineData] = useState([]);
+
+    const checkWeeklyProgress = async (groupId, userId) => {
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0 is Sunday, 6 is Saturday
+
+        const lastSaturday = new Date(now);
+        if (dayOfWeek === 6) { // It's Saturday
+            lastSaturday.setHours(0, 0, 0, 0);
+        } else {
+            const daysToSubtract = (dayOfWeek + 1);
+            lastSaturday.setDate(now.getDate() - daysToSubtract);
+            lastSaturday.setHours(0, 0, 0, 0);
+        }
+
+        const weeklyProgressQuery = query(
+            collection(db, "groups", groupId, "progress"),
+            where("userId", "==", userId),
+            where("createdAt", ">=", lastSaturday),
+            limit(1)
+        );
+
+        const weeklySnapshot = await getDocs(weeklyProgressQuery);
+        if (weeklySnapshot.empty) {
+            const reminderDismissed = sessionStorage.getItem(`reminder_dismissed_${userId}`);
+            if (!reminderDismissed) {
+                setShowReminder(true);
+            }
+        }
+    };
+
+    const closeReminder = () => {
+        setShowReminder(false);
+        sessionStorage.setItem(`reminder_dismissed_${user.uid}`, 'true');
+    };
+
+    const handleLogNow = () => {
+        setShowReminder(false);
+        setShowForm(true);
+    };
 
     useEffect(() => {
         const fetchLatest = async () => {
@@ -401,10 +442,14 @@ function Dashboard() {
 
             timelineArray.sort((a, b) => a.expectedEndDate - b.expectedEndDate);
             setTimelineData(timelineArray);
+
+            if (user && group) {
+                checkWeeklyProgress(group.id, user.uid);
+            }
         };
 
         fetchLatest();
-    }, [group]);
+    }, [group, user]);
 
     const handleChange = (e) => {
         setFormData({
@@ -418,6 +463,11 @@ function Dashboard() {
 
         if (!group) {
             toast.error("No group found");
+            return;
+        }
+
+        if (formData.linkedinActivity === "Posted" && !formData.postLink.trim()) {
+            toast.error("Please provide the LinkedIn Post Link.");
             return;
         }
 
@@ -567,6 +617,10 @@ function Dashboard() {
 
             toast.success("Progress saved successfully!");
 
+            if (user && group) {
+                checkWeeklyProgress(group.id, user.uid);
+            }
+
         } catch (error) {
             console.error("Save error:", error);
             toast.error("Failed to save progress");
@@ -577,9 +631,8 @@ function Dashboard() {
         <div className="min-h-screen bg-transparent p-4 sm:p-6 lg:p-8 transition-colors duration-300">
             <div className="max-w-[1600px] w-full mx-auto space-y-8">
 
-                {/* 1. Group Info Header Card */}
                 {/* 1. Sleek Group Info Header Card */}
-                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl rounded-[2rem] p-8 text-slate-800 dark:text-white border border-slate-200/50 dark:border-white/5 shadow-2xl relative overflow-hidden">
+                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl rounded-2xl md:rounded-[2rem] p-5 sm:p-8 text-slate-800 dark:text-white border border-slate-200/50 dark:border-white/5 shadow-2xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
                     <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/3 pointer-events-none" />
                     <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -589,7 +642,7 @@ function Dashboard() {
                             </div>
                             {group ? (
                                 <div>
-                                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent mb-4">{group.groupName}</h1>
+                                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent mb-4">{group.groupName}</h1>
                                     <div className="flex flex-wrap items-center gap-3 mt-3">
                                         <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Batch Code:</p>
                                         <button
@@ -610,13 +663,13 @@ function Dashboard() {
                             <div className="flex flex-col sm:flex-row gap-4 items-stretch md:items-center w-full md:w-auto mt-6 md:mt-0">
                                 <button
                                     onClick={() => setShowForm(true)}
-                                    className="px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/20 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 border border-indigo-500"
+                                    className="px-4 sm:px-6 py-3 sm:py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl md:rounded-2xl shadow-lg shadow-indigo-600/20 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 border border-indigo-500"
                                 >
                                     <PlusCircle className="w-5 h-5" />
                                     Log Weekly Progress
                                 </button>
-                                <Link to="/dashboard/peers" className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 text-center min-w-[120px] hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-300 group cursor-pointer block flex-shrink-0">
-                                    <div className="text-3xl font-black mb-1 group-hover:scale-110 transition-transform text-slate-800 dark:text-white">{group.members?.length || 0}</div>
+                                <Link to="/dashboard/peers" className="bg-slate-50 dark:bg-slate-800/50 rounded-xl md:rounded-2xl p-3 sm:p-4 border border-slate-200 dark:border-slate-700 text-center min-w-[100px] sm:min-w-[120px] hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-300 group cursor-pointer block flex-shrink-0">
+                                    <div className="text-2xl sm:text-3xl font-black mb-1 group-hover:scale-110 transition-transform text-slate-800 dark:text-white">{group.members?.length || 0}</div>
                                     <div className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Total Mates</div>
                                 </Link>
                             </div>
@@ -631,7 +684,7 @@ function Dashboard() {
                             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
                                 <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowForm(false)}></div>
 
-                                <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 p-8 animate-fadeIn transform transition-all scale-100">
+                                <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl md:rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 animate-fadeIn transform transition-all scale-100">
                                     <div className="flex justify-between items-center mb-6">
                                         <h3 className="text-2xl font-extrabold text-slate-800 dark:text-white flex items-center gap-3">
                                             <div className="p-2 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400">
@@ -706,7 +759,9 @@ function Dashboard() {
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Post Link (Optional)</label>
+                                                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">
+                                                    Post Link {formData.linkedinActivity === "Posted" ? <span className="text-red-500">*</span> : "(Optional)"}
+                                                </label>
                                                 <input
                                                     type="text"
                                                     name="postLink"
@@ -736,7 +791,7 @@ function Dashboard() {
                             <Leaderboard groupId={group.id} />
 
                             {/* Timeline Card */}
-                            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2rem] shadow-xl border border-slate-200/50 dark:border-white/5 overflow-hidden relative h-full flex flex-col transition-colors duration-300">
+                            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl md:rounded-[2rem] shadow-xl border border-slate-200/50 dark:border-white/5 overflow-hidden relative h-full flex flex-col transition-colors duration-300">
                                 <div className="px-4 py-4 border-b border-slate-100/50 dark:border-slate-800/50 flex items-center justify-between shrink-0">
                                     <h2 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-indigo-900 dark:from-slate-100 dark:to-indigo-300 bg-clip-text text-transparent flex items-center gap-2">
                                         <Calendar className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
@@ -794,8 +849,8 @@ function Dashboard() {
                 )}
 
                 {/* 4. Batch Progress History */}
-                <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2rem] shadow-xl border border-slate-200/50 dark:border-white/5 overflow-hidden transition-colors duration-300">
-                    <div className="px-6 py-4 border-b border-slate-100/50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between">
+                <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl md:rounded-[2rem] shadow-xl border border-slate-200/50 dark:border-white/5 overflow-hidden transition-colors duration-300">
+                    <div className="px-4 md:px-6 py-4 border-b border-slate-100/50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                         <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
                             <Activity className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                             Recent Batch Activity
@@ -830,10 +885,10 @@ function Dashboard() {
                                     <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
                                         {latestUpdates.map((item, index) => (
                                             <tr key={item.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition-colors group">
-                                                <td className="px-6 py-3 text-center text-sm font-bold text-slate-400 dark:text-slate-500">
+                                                <td className="px-4 sm:px-6 py-3 text-center text-sm font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap">
                                                     {index + 1}
                                                 </td>
-                                                <td className="px-6 py-3">
+                                                <td className="px-4 sm:px-6 py-3 whitespace-nowrap min-w-[150px]">
                                                     <Link to={`/dashboard/profile/${item.userId}`} className="flex items-center gap-3 group-hover:opacity-90 transition-opacity">
                                                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-indigo-600 dark:to-purple-700 flex items-center justify-center text-white font-bold text-sm shadow-sm">
                                                             {(item.userName || "U").charAt(0).toUpperCase()}
@@ -846,12 +901,12 @@ function Dashboard() {
                                                         </div>
                                                     </Link>
                                                 </td>
-                                                <td className="px-6 py-3">
+                                                <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
                                                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                                                         Module {item.moduleNo}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-3">
+                                                <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
                                                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${item.examStatus === 'Passed' ? 'bg-emerald-100/80 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-400' :
                                                         item.examStatus === 'Repeat' ? 'bg-amber-100/80 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400' :
                                                             'bg-sky-100/80 dark:bg-sky-500/20 text-sky-800 dark:text-sky-400'
@@ -859,7 +914,7 @@ function Dashboard() {
                                                         {item.examStatus}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-3 text-sm font-medium text-slate-600 dark:text-slate-400">
+                                                <td className="px-4 sm:px-6 py-3 text-sm font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">
                                                     <div className="flex items-center gap-2">
                                                         <span>{item.linkedinActivity}</span>
                                                         {item.postLink && (
@@ -874,7 +929,7 @@ function Dashboard() {
                                                             </a>
                                                         )}
                                                     </div>
-                                                </td>                                                <td className="px-6 py-3 text-right">
+                                                </td>                                                <td className="px-4 sm:px-6 py-3 text-right whitespace-nowrap">
                                                     <span className="font-bold text-xl text-indigo-600 dark:text-indigo-400">{item.score || 0}</span>
                                                 </td>
                                             </tr>
@@ -887,6 +942,11 @@ function Dashboard() {
                 </div>
 
             </div>
+            <ReminderModal
+                isOpen={showReminder}
+                onClose={closeReminder}
+                onLogNow={handleLogNow}
+            />
         </div >
     );
 }

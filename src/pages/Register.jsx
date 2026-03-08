@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { auth, db } from "../firebase/firebaseConfig";
-import { createUserWithEmailAndPassword, sendEmailVerification, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, GoogleAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, UserPlus, Eye, EyeOff, CheckCircle2, Sun, Moon, Phone, MessageSquare } from "lucide-react";
@@ -73,6 +73,9 @@ function Register() {
     const trimmedEmail = email.trim();
 
     try {
+      // Force local persistence
+      await setPersistence(auth, browserLocalPersistence);
+
       await createUserWithEmailAndPassword(auth, trimmedEmail, password);
 
       const actionCodeSettings = {
@@ -95,6 +98,10 @@ function Register() {
   const handleGoogleSignUp = async () => {
     try {
       setLoading(true);
+
+      // Force local persistence
+      setPersistence(auth, browserLocalPersistence).catch(console.error);
+
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;

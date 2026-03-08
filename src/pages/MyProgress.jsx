@@ -75,6 +75,11 @@ function MyProgress() {
             return;
         }
 
+        if (formData.linkedinActivity === "Posted" && !formData.postLink.trim()) {
+            toast.error("Please provide the LinkedIn Post Link.");
+            return;
+        }
+
         try {
             const existingDocQuery = query(
                 collection(db, "groups", group.id, "progress"),
@@ -146,6 +151,11 @@ function MyProgress() {
     };
 
     const handleUpdate = async () => {
+        if (editData.linkedinActivity === "Posted" && (!editData.postLink || !editData.postLink.trim())) {
+            toast.error("Please provide the LinkedIn Post Link.");
+            return;
+        }
+
         try {
             // Check for duplicate module entry
             const existingDocQuery = query(
@@ -439,7 +449,9 @@ function MyProgress() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Post Link (Optional)</label>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">
+                                        Post Link {formData.linkedinActivity === "Posted" ? <span className="text-red-500">*</span> : "(Optional)"}
+                                    </label>
                                     <input
                                         type="text"
                                         name="postLink"
@@ -533,7 +545,9 @@ function MyProgress() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Post Link</label>
+                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                                    Post Link {editData.linkedinActivity === "Posted" && <span className="text-red-500">*</span>}
+                                </label>
                                 <input
                                     type="text"
                                     name="postLink"

@@ -95,7 +95,7 @@ function Leaderboard({ groupId }) {
     };
 
     return (
-        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2rem] shadow-xl border border-slate-200/50 dark:border-white/5 overflow-hidden relative h-full flex flex-col transition-colors duration-300">
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl md:rounded-[2rem] shadow-xl border border-slate-200/50 dark:border-white/5 overflow-hidden relative h-full flex flex-col transition-colors duration-300">
 
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/20 rounded-full blur-3xl opacity-50 -z-10 translate-x-1/3 -translate-y-1/3" />
 
@@ -132,8 +132,8 @@ function Leaderboard({ groupId }) {
                                         </span>
                                         {getRankIcon(user.rank)}
                                     </div>
-                                    <Link to={`/dashboard/profile/${user.userId}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm ${user.rank === 1 ? 'bg-gradient-to-br from-amber-400 to-amber-600' :
+                                    <Link to={`/dashboard/profile/${user.userId}`} className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity">
+                                        <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm ${user.rank === 1 ? 'bg-gradient-to-br from-amber-400 to-amber-600' :
                                             user.rank === 2 ? 'bg-gradient-to-br from-slate-400 to-slate-500' :
                                                 user.rank === 3 ? 'bg-gradient-to-br from-amber-700 to-amber-800' :
                                                     'bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-indigo-600 dark:to-purple-700'

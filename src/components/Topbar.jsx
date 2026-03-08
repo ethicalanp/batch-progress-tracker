@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { Moon, Sun, User as UserIcon, Settings, LogOut, Menu } from "lucide-react";
 import { auth } from "../firebase/firebaseConfig";
+import NotificationDropdown from "./NotificationDropdown";
 
 function Topbar({ onMenuClick }) {
   const { user, userProfile } = useAuth();
@@ -28,7 +29,7 @@ function Topbar({ onMenuClick }) {
   }, []);
 
   return (
-    <header className="h-[90px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b-2 border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-8 shadow-sm transition-colors duration-300 sticky top-0 z-[100]">
+    <header className="h-[70px] sm:h-[90px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b-2 border-slate-200 dark:border-slate-800 flex items-center justify-between px-3 sm:px-8 shadow-sm transition-colors duration-300 sticky top-0 z-[100]">
 
       {/* Hamburger Menu (Mobile Only) */}
       <div className="flex items-center lg:hidden">
@@ -41,15 +42,18 @@ function Topbar({ onMenuClick }) {
       </div>
 
       {/* LOGO (Mobile Only, optional space filler) */}
-      <h1 className="lg:hidden text-xl font-bold text-slate-900 dark:text-white truncate px-2">
+      <h1 className="lg:hidden text-lg sm:text-xl font-bold text-slate-900 dark:text-white truncate px-2">
         BatchTracker
       </h1>
 
       {/* RIGHT USER */}
       <div className="flex items-center gap-4 sm:gap-6 ml-auto">
 
+        {/* NOTIFICATIONS */}
+        <NotificationDropdown />
+
         {/* THEME TOGGLE */}
-        <div className="pr-8 border-r-2 border-slate-200 dark:border-slate-800">
+        <div className="pr-6 sm:pr-8 border-r-2 border-slate-200 dark:border-slate-800">
           <button
             onClick={toggleTheme}
             className="p-2.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
@@ -73,7 +77,7 @@ function Topbar({ onMenuClick }) {
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="w-11 h-11 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-700 text-white flex items-center justify-center text-lg font-bold shadow-md border-2 border-white dark:border-slate-800 hover:scale-105 transition-transform"
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-700 text-white flex items-center justify-center text-lg font-bold shadow-md border-2 border-white dark:border-slate-800 hover:scale-105 transition-transform"
           >
             {userProfile?.photoURL ? (
               <img src={userProfile.photoURL} alt="Profile" className="w-full h-full object-cover rounded-full" />

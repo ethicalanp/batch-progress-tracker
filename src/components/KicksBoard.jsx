@@ -89,7 +89,7 @@ function KicksBoard({ groupId }) {
     };
 
     return (
-        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2rem] shadow-xl border border-slate-200/50 dark:border-white/5 overflow-hidden relative h-full flex flex-col transition-colors duration-300">
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl md:rounded-[2rem] shadow-xl border border-slate-200/50 dark:border-white/5 overflow-hidden relative h-full flex flex-col transition-colors duration-300">
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/20 rounded-full blur-3xl opacity-50 -z-10 translate-x-1/3 -translate-y-1/3" />
 
             <div className="px-4 py-4 border-b border-slate-100/50 dark:border-slate-800/50 flex items-center justify-between shrink-0">
@@ -124,20 +124,20 @@ function KicksBoard({ groupId }) {
                                     key={userData.userId}
                                     className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-all duration-300 hover:shadow-md hover:scale-[1.01] dark:hover:bg-slate-800/50 bg-white dark:bg-slate-900 border-transparent`}
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <Link to={`/dashboard/profile/${userData.userId}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-indigo-600 dark:to-purple-700">
+                                    <div className="flex items-center gap-2 sm:gap-4">
+                                        <Link to={`/dashboard/profile/${userData.userId}`} className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity min-w-0">
+                                            <div className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-indigo-600 dark:to-purple-700">
                                                 {(userData.userName || "U").charAt(0).toUpperCase()}
                                             </div>
-                                            <div>
-                                                <p className="font-bold flex items-center gap-1.5 hover:text-amber-600 dark:hover:text-amber-400 transition-colors text-slate-700 dark:text-slate-300">
-                                                    {userData.userName}
-                                                    {userData.emoji && <span className="text-lg leading-none">{userData.emoji}</span>}
+                                            <div className="min-w-0">
+                                                <p className="font-bold flex items-center gap-1 sm:gap-1.5 hover:text-amber-600 dark:hover:text-amber-400 transition-colors text-slate-700 dark:text-slate-300 truncate">
+                                                    <span className="truncate">{userData.userName}</span>
+                                                    {userData.emoji && <span className="text-base sm:text-lg leading-none shrink-0">{userData.emoji}</span>}
                                                 </p>
                                             </div>
                                         </Link>
                                     </div>
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2 sm:gap-4 shrink-0 pl-2">
                                         <div className="text-right">
                                             <p className="text-xl font-black tracking-tight text-amber-600 dark:text-amber-400">
                                                 {userData.points}
