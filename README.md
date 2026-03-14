@@ -149,9 +149,9 @@ Thanks to everyone who has contributed to this project!
   <tbody>
     <tr>
       <td align="center" valign="top" width="14.28%">
-        <a href="https://github.com/YOUR_USERNAME">
+        <a href="https://github.com/ethicalanp">
           <img src="https://github.com/YOUR_USERNAME.png" width="100px;" alt="Your Name"/><br />
-          <sub><b>Your Name</b></sub>
+          <sub><b>Anupam DS </b></sub>
         </a><br />
         <a title="Code">💻</a>
         <a title="Design">🎨</a>
