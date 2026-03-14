@@ -150,7 +150,7 @@ Thanks to everyone who has contributed to this project!
     <tr>
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/ethicalanp">
-          <img src="https://github.com/YOUR_USERNAME.png" width="100px;" alt="Your Name"/><br />
+          <img src="https://github.com/ethicalanp" width="100px;" alt="Your Name"/><br />
           <sub><b>Anupam DS </b></sub>
         </a><br />
         <a title="Code">💻</a>
